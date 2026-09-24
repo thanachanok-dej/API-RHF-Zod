@@ -1,15 +1,30 @@
 "use client";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { defaultQuery, fetchProducts } from "../lib/products";
-import type { Product, ProductList, SearchQuery } from "../lib/products";
+import ProductSearchForm from "./ProductSearchForm";
+
+// เพิ่ม ProductDraft เข้าไปในบรรทัด import type เดิม ไม่เขียนบรรทัดใหม่
+import type {
+  Product,
+  ProductDraft,
+  ProductList,
+  SearchQuery,
+} from "../lib/products";
+import ProductForm from "./ProductForm";
 
 type LoadState = "idle" | "loading" | "error" | "ready";
 
 export default function ProductExplorer() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [status, setStatus] = useState<LoadState>("idle");
+  // const [status, setStatus] = useState<LoadState>("idle");
+  const [status, setStatus] = useState<LoadState>("loading");
   const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    fetchProducts(defaultQuery).then(showResult).catch(showError);
+    // เติม: สิ่งที่กำหนดให้ทำงานเพียงครั้งเดียวตอนแสดงผลครั้งแรก
+  }, []);
 
   function showResult(list: ProductList) {
     setProducts(list.products);
@@ -36,6 +51,11 @@ export default function ProductExplorer() {
     }
   }
 
+  function saveProduct(draft: ProductDraft) {
+    // เติม: เครื่องหมายที่คัดลอกสมาชิกเดิมทั้งหมดของ Array
+    setProducts([...products, { ...draft, id: Date.now() }]);
+  }
+
   return (
     <main>
       <h1>รายการสินค้า</h1>
@@ -47,6 +67,10 @@ export default function ProductExplorer() {
       >
         {status === "loading" ? "กำลังโหลด" : "โหลดข้อมูล"}
       </button>
+
+      <ProductSearchForm onSearch={loadProducts} />
+
+      <ProductForm editing={null} onSave={saveProduct} onCancel={() => {}} />
 
       {/* ส่วนแสดงผล เขียนเพิ่มในหัวข้อ 1.7 */}
       <section aria-live="polite">
@@ -64,7 +88,7 @@ export default function ProductExplorer() {
           <table>
             <thead>
               <tr>
-                <th>รูปภาพ</th> {/* เพิ่มหัวตาราง */}
+                <th>รูปภาพ</th>
                 <th>ชื่อสินค้า</th>
                 <th>ราคา</th>
                 <th>คงเหลือ</th>
@@ -75,14 +99,33 @@ export default function ProductExplorer() {
               {products.map((item) => (
                 <tr key={item.id}>
                   <td>
-                    {/* 2. แสดงรูปภาพสินค้า */}
-                    <Image
-                      src={item.thumbnail}
-                      alt={item.title}
-                      width={60}
-                      height={60}
-                      style={{ objectFit: "cover", borderRadius: "6px" }}
-                    />
+                    {/* เช็กว่ามี item.thumbnail และไม่ใช่ข้อความว่าง */}
+                    {item.thumbnail && item.thumbnail.trim() !== "" ? (
+                      <Image
+                        src={item.thumbnail}
+                        alt={item.title || "Product image"}
+                        width={60}
+                        height={60}
+                        style={{ objectFit: "cover", borderRadius: 6 }}
+                      />
+                    ) : (
+                      /* กล่องสีเทาสำรองกรณีไม่มีรูปภาพ */
+                      <div
+                        style={{
+                          width: 60,
+                          height: 60,
+                          backgroundColor: "#e5e7eb",
+                          borderRadius: 6,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 12,
+                          color: "#9ca3af",
+                        }}
+                      >
+                        No Image
+                      </div>
+                    )}
                   </td>
                   <td>{item.title}</td>
                   <td>{item.price}</td>

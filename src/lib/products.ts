@@ -33,19 +33,26 @@ export const ProductListSchema = z.object({
   limit: z.number(),
 });
 
+
+
 // เติม: ตัวช่วยของ Zod ที่อ่าน Type ออกมาจาก Schema
 export type Product     = z.infer<typeof ProductSchema>;
 export type ProductList = z.infer<typeof ProductListSchema>;
+// เติม: เมธอดของ Zod ที่สร้าง Schema ใหม่โดยนำฟิลด์ที่ระบุออก
+export const ProductDraftSchema = ProductSchema.omit({ id: true });
+export type ProductDraft = z.infer<typeof ProductDraftSchema>;
+
+
 //เอามาจากเว็บไหน
 const API_BASE = "https://dummyjson.com";
 
 export const SORT_FIELDS = ["title", "price", "stock"] as const;
 
-export type SearchQuery = {
-  q: string;
-  limit: number;
-  sortBy: (typeof SORT_FIELDS)[number];
-};
+// export type SearchQuery = {
+//   q: string;
+//   limit: number;
+//   sortBy: (typeof SORT_FIELDS)[number];
+// };
 
 export const defaultQuery: SearchQuery = {
   q: "",
@@ -67,8 +74,6 @@ export function buildProductUrl(query: SearchQuery): string {
   console.log("เรียก URL :", url);
   return url;
 }
-
-
 
 // ถ้ามี await ต้องใส่ async ด้วย ซึ่ง async ทำงานแบบอะซิงโครนัส คือ ทำงานแบบไม่ต้องรอให้เสร็จสิ้นก่อนที่จะทำงานต่อไป
 export async function fetchProducts(
@@ -96,3 +101,18 @@ export async function fetchProducts(
 
   return result.data;
 }
+
+// ลบ type SearchQuery ที่ประกาศไว้ในหัวข้อ 1.4 ออก แล้วใช้สองบล็อกนี้แทน
+export const SearchQuerySchema = z.object({
+  q: z.string().trim(),
+  limit: z
+    .number({ error: "กรุณากรอกจำนวนรายการ" })
+    .int("จำนวนรายการต้องเป็นจำนวนเต็ม")
+    .min(1, "อย่างน้อย 1 รายการ")
+    .max(30, "ไม่เกิน 30 รายการ"),
+  sortBy: z.enum(SORT_FIELDS),
+  // sortBy คือการกำหนดค่าที่เป็นไปได้ของฟิลด์ที่ใช้ในการเรียงลำดับ โดยใช้ z.enum(SORT_FIELDS) เพื่อให้แน่ใจว่าค่าที่ส่งเข้ามาจะต้องเป็นหนึ่งในค่าที่กำหนดไว้ใน SORT_FIELDS เท่านั้น
+});
+
+export type SearchQuery = z.infer<typeof SearchQuerySchema>;
+
